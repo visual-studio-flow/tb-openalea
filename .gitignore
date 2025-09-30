@@ -1,0 +1,61 @@
+# ------------------------
+# W3Nest build/artifacts
+# ------------------------
+dist/
+tooling/
+webpm.zip
+.w3nest/.template
+assets/api/
+
+# ------------------------
+# Node.js
+# ------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------
+# Python
+# ------------------------
+.venv/
+*.egg-info/
+*.whl
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.log
+
+# ------------------------
+# Environment variables
+# ------------------------
+.env
+
+# ------------------------
+# macOS
+# ------------------------
+.DS_Store
+
+# ------------------------
+# Windows
+# ------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ------------------------
+# IDE / Editor
+# ------------------------
+*.iml
+.idea/
+.vscode/
+
+# ------------------------
+# Misc / Temporary files
+# ------------------------
+*.swp
+*.swo
+*.tmp

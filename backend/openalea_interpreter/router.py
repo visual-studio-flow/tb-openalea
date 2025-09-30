@@ -1,0 +1,190 @@
+"""
+Module gathering the definition of endpoints.
+"""
+
+import io
+import time
+from contextlib import redirect_stderr, redirect_stdout
+from typing import Any
+import uuid
+from openalea.mtg import MTG, fat_mtg
+from openalea.weberpenn.mtg_client import Weber_MTG
+from openalea.weberpenn.tree_client import Quaking_Aspen
+from oawidgets.plantgl import PlantGL
+from fastapi import APIRouter, Depends
+from starlette.requests import Request
+from starlette.responses import Response
+
+from openalea_interpreter.environment import Configuration, Environment
+
+from openalea_interpreter.schemas import (
+    RunBody,
+    RunResponse,
+    ScriptError,
+    CreateObjectBody,
+    CreateObjectResponse,
+)
+
+router = APIRouter()
+"""
+The router object.
+"""
+
+
+class ScopeStore:
+    """
+    Encapsulates the global scope used when running the scripts.
+    """
+
+    global_scope: dict[str, Any] = {}
+    """
+    The scope.
+    """
+
+
+async def exec_cell(
+    cell_id: str, code: str, scope: dict[str, Any]
+) -> dict[str, Any] | ScriptError:
+    """
+    Execute the provided code.
+
+    Parameters:
+        code: Code to interpret.
+        scope: Entering scope.
+
+    Returns:
+        Exiting scope.
+    """
+    instrumented = f"""
+import traceback
+async def __exec():
+    try:
+        exec(compiled_src, globals())
+        return locals()
+    except Exception as e:
+        tb = traceback.extract_tb(e.__traceback__)
+        for entry in reversed(tb):
+            if entry.filename == "<{cell_id}>":
+                error_line = entry.lineno  # Correct user script line number
+                break
+        else:
+            error_line = None
+            
+        tb_list = traceback.format_exception(type(e), e, e.__traceback__)
+        return ScriptError(kind='Runtime', message=str(e), stackTrace=tb_list, lineNumber=error_line)
+"""
+    try:
+        scope["compiled_src"] = compile(code, f"<{cell_id}>", "exec")
+    except (SyntaxError, IndentationError, TabError) as e:
+        return ScriptError(kind="AST", message=str(e), lineNumber=e.lineno)
+    scope["ScriptError"] = ScriptError
+    exec(instrumented, scope)
+
+    new_scope = await scope["__exec"]()
+    if isinstance(new_scope, ScriptError):
+        return new_scope
+
+    return {**scope, **new_scope}
+
+
+@router.get("/")
+async def healthz() -> Response:
+    """
+    When proxied through W3Nest, this end point is triggered to ensure a backend
+    is listening.
+    """
+    return Response(status_code=200)
+
+
+@router.post("/run")
+async def run_code(
+    request: Request,
+    body: RunBody,
+    config: Configuration = Depends(Environment.get_config),
+) -> RunResponse:
+    """
+    Run the provided code, optionally given captured input variables and returning the values of captured outputs.
+
+    Parameters:
+        request: Incoming request.
+        body: Body specification.
+        config: Injected configuration.
+
+    Returns:
+        Std outputs and eventual value of captured outputs.
+    """
+    code = body.code
+    async with config.context(request).start(action="/run") as ctx:
+
+        entering_scope = ScopeStore.global_scope
+        scope = {**entering_scope, **body.capturedIn, "ctx": ctx}
+        await ctx.info("Input scope prepared")
+
+        start = time.time()
+        cell_stdout = io.StringIO()
+        cell_stderr = io.StringIO()
+        with redirect_stdout(cell_stdout), redirect_stderr(cell_stderr):
+            new_scope = await exec_cell(body.cellId, code, scope)
+            if isinstance(new_scope, ScriptError):
+                return RunResponse(
+                    output=cell_stdout.getvalue(), capturedOut={}, error=new_scope
+                )
+
+        end = time.time()
+        output = cell_stdout.getvalue()
+        error = cell_stderr.getvalue()
+        await ctx.info(
+            f"'exec(code, scope)' done in {int(1000*(end-start))} ms",
+            data={"output": output, "error": error},
+        )
+        ScopeStore.global_scope = new_scope
+        captured_out = {k: new_scope[k] for k in body.capturedOut if k}
+
+        await ctx.info("Output scope persisted")
+        return RunResponse(output=output, capturedOut=captured_out)
+
+
+class ObjectStore:
+    globals: dict[str, Any] = {}
+
+
+@router.post("/create-object")
+async def create_object(
+    request: Request,
+    body: CreateObjectBody,
+    config: Configuration = Depends(Environment.get_config),
+) -> CreateObjectResponse:
+    code = body.code
+    async with config.context(request).start(action="/run") as ctx:
+
+        scope = {"ObjectStore": ObjectStore, **body.capturedIn, "ctx": ctx}
+        for k, v in body.inputs.items():
+            scope[k] = ObjectStore.globals[v.id]
+
+        await ctx.info("Input scope prepared")
+        scope_id = str(uuid.uuid4())
+        start = time.time()
+        cell_stdout = io.StringIO()
+        cell_stderr = io.StringIO()
+        with redirect_stdout(cell_stdout), redirect_stderr(cell_stderr):
+            resp = await exec_cell(scope_id, code, scope)
+            if isinstance(resp, ScriptError):
+                return RunResponse(
+                    output=cell_stdout.getvalue(), capturedOut={}, error=resp
+                )
+
+        end = time.time()
+        output = cell_stdout.getvalue()
+        error = cell_stderr.getvalue()
+
+        result = resp["result"]
+        ObjectStore.globals[scope_id] = result
+        await ctx.info(
+            f"'exec(code, scope)' done in {int(1000*(end-start))} ms",
+            data={"output": output, "error": error},
+        )
+        captured_out = {k: resp[k] for k in body.capturedOut if k}
+        await ctx.info("Output scope persisted")
+        return CreateObjectResponse(
+            type=type(result).__name__, id=scope_id, capturedOut=captured_out
+        )
