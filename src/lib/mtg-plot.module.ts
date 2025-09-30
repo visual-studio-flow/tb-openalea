@@ -55,7 +55,10 @@ function createBufferAttr<T extends Float32Array | Uint32Array>(
     return new BufferAttribute(buffer, size)
 }
 
-function createBufferGeom(data: { position; index }) {
+function createBufferGeom(data: {
+    position: Immutables<number>
+    index: Immutables<number>
+}) {
     const geometry = new BufferGeometry()
 
     geometry.setAttribute(
@@ -85,11 +88,9 @@ export const outputs = (
     arg: Modules.OutputMapperArg<typeof configuration.schema, typeof inputs>,
 ) => ({
     output$: arg.inputs.input$.pipe(
-        switchMap(({ data, configuration, context }) => {
-            console.log('Run mtg-plot module', { data, configuration })
-            const openalea = get_interpreter()
+        switchMap(({ data, context }) => {
             return from(
-                openalea.createObject({
+                get_interpreter().createObject({
                     code,
                     inputs: {
                         wp: data,
@@ -99,16 +100,17 @@ export const outputs = (
                 }),
             ).pipe(
                 map((resp) => {
-                    console.log('MtgPlot done', resp)
                     const group = new Group()
                     resp.capturedOut.result
-                        .map((data) => {
-                            const geom = createBufferGeom(data)
-                            const mat = new MeshStandardMaterial({
-                                color: 0x3399ff,
-                            })
-                            return new Mesh(geom, mat)
-                        })
+                        .map(
+                            (data) =>
+                                new Mesh(
+                                    createBufferGeom(data),
+                                    new MeshStandardMaterial({
+                                        color: 0x3399ff,
+                                    }),
+                                ),
+                        )
                         .forEach((mesh) => {
                             group.add(mesh)
                         })

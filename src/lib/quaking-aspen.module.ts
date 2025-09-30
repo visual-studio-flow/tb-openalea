@@ -41,12 +41,9 @@ export const outputs = (
     arg: Modules.OutputMapperArg<typeof configuration.schema, typeof inputs>,
 ) => ({
     output$: arg.inputs.input$.pipe(
-        switchMap(({ configuration, context }) => {
-            console.log('Run quaking-aspen module', configuration)
-            const openalea = get_interpreter()
-            const cellId = `${Math.floor(Math.random() * 100000)}`
+        switchMap(({ context }) => {
             return from(
-                openalea.createObject({
+                get_interpreter().createObject({
                     code,
                     inputs: {},
                     capturedIn: {},

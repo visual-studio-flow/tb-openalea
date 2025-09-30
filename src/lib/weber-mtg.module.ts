@@ -43,9 +43,7 @@ export const outputs = (
     arg: Modules.OutputMapperArg<typeof configuration.schema, typeof inputs>,
 ) => ({
     output$: arg.inputs.input$.pipe(
-        switchMap(({ data, configuration, context }) => {
-            console.log('Run weber-mtg module', { data, configuration })
-            const openalea = get_interpreter()
+        switchMap(({ data, context }) => {
             return from(
                 openalea.createObject({
                     code,

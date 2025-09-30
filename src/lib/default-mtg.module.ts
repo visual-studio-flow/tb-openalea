@@ -75,10 +75,8 @@ export const outputs = (
 ) => ({
     output$: arg.inputs.input$.pipe(
         switchMap(({ configuration, context }) => {
-            console.log('Run default-mtg module', configuration)
-            const openalea = get_interpreter()
             return from(
-                openalea.createObject({
+                get_interpreter().createObject({
                     code,
                     inputs: {},
                     capturedIn: {
