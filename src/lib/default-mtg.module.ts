@@ -5,7 +5,7 @@ import { get_interpreter } from './utils'
 /**
  * ### ⚙️ Defines the module's configuration.
  *
- * This module has no configuration parameters.
+ * *  `axes`: definitions of the axes
  */
 export const configuration = {
     schema: {
@@ -29,9 +29,15 @@ export const inputs = {
     input$: {},
 }
 
-const code = `
+/**
+ *
+ * The python code running in the interpreter:
+ * *  `axes` is captured as input
+ * *  `result` is captured as output
+ */
+export const code = `
 from openalea.mtg import MTG, fat_mtg
-# 'axes' is captured-input, 'result' as output 
+
 g = MTG()
 root = g.add_component(g.root)
 
@@ -65,7 +71,7 @@ result = g
  * #### `output$`
  *
  * Emits an object for each message received on `input$`, containing:
- *   - `data`: a `THREE.BoxGeometry` instance created from the current configuration.
+ *   - `data`: the reference to the result variable of {@link code}.
  *   - `context`: the original message context.
  *
  * @param arg Forward parameters with input stream and configuration

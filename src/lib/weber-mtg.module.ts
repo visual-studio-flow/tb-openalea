@@ -22,7 +22,14 @@ export const inputs = {
     input$: {},
 }
 
-const code = `
+/**
+ *
+ * The python code running in the interpreter:
+ * *  `param` is captured as input
+ * *  `g` is captured as input
+ * *  `result` is captured as output
+ */
+export const code = `
 from openalea.weberpenn.mtg_client import Weber_MTG
 
 result = Weber_MTG(param, g)
@@ -34,7 +41,7 @@ result.run()
  * #### `output$`
  *
  * Emits an object for each message received on `input$`, containing:
- *   - `data`: a `THREE.BoxGeometry` instance created from the current configuration.
+ *   - `data`: the reference to the result variable of {@link code}.
  *   - `context`: the original message context.
  *
  * @param arg Forward parameters with input stream and configuration
@@ -45,7 +52,7 @@ export const outputs = (
     output$: arg.inputs.input$.pipe(
         switchMap(({ data, context }) => {
             return from(
-                openalea.createObject({
+                get_interpreter().createObject({
                     code,
                     inputs: {
                         param: data[0],

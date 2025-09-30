@@ -69,14 +69,14 @@ config = ProjectConfig(
         ),
         auxiliaryModules=[
             *auxiliary_modules,
-            # AuxiliaryModule(
-            #     name="Doc",
-            #     entryFile="./doc/index.ts",
-            #     loadDependencies=[
-            #         "mkdocs-ts",
-            #         "@w3nest/webpm-client",
-            #     ],
-            # ),
+            AuxiliaryModule(
+                name="Doc",
+                entryFile="./doc/index.ts",
+                loadDependencies=[
+                    "mkdocs-ts",
+                    "@w3nest/webpm-client",
+                ],
+            ),
         ],
     ),
     inPackageJson={

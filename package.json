@@ -85,6 +85,17 @@
                 ],
                 "aliases": []
             }
+        },
+        "./Doc": {
+            "default": "./dist/Doc.js",
+            "types": "./dist/src/doc/index.d.ts",
+            "webpm": {
+                "dependencies": [
+                    "mkdocs-ts",
+                    "@w3nest/webpm-client"
+                ],
+                "aliases": []
+            }
         }
     },
     "dependencies": {
@@ -143,7 +154,8 @@
             "quakingAspen": "./lib/quaking-aspen.module.ts",
             "defaultMtg": "./lib/default-mtg.module.ts",
             "weberMtg": "./lib/weber-mtg.module.ts",
-            "mtgPlot": "./lib/mtg-plot.module.ts"
+            "mtgPlot": "./lib/mtg-plot.module.ts",
+            "Doc": "./doc/index.ts"
         },
         "externals": {
             "@mkdocs-ts/code-api": [

@@ -28,8 +28,12 @@ export const configuration = {
 export const inputs = {
     input$: {},
 }
-
-const code = `
+/**
+ *
+ * The python code running in the interpreter:
+ * *  `result` is captured as output
+ */
+export const code = `
 from oawidgets.plantgl import group_meshes_by_color
 
 plot = wp.plot()
@@ -79,7 +83,7 @@ function createBufferGeom(data: {
  * #### `output$`
  *
  * Emits an object for each message received on `input$`, containing:
- *   - `data`: a `THREE.BoxGeometry` instance created from the current configuration.
+ *   - `data`: the reference to the result variable of {@link code}.
  *   - `context`: the original message context.
  *
  * @param arg Forward parameters with input stream and configuration

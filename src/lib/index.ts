@@ -1,2 +1,5 @@
 export * from './toolbox'
 export * as QuakingAspen from './quaking-aspen.module'
+export * as DefaultMtg from './default-mtg.module'
+export * as MtgPlot from './mtg-plot.module'
+export * as WeberMtg from './weber-mtg.module'

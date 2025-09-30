@@ -4,7 +4,7 @@ Visual Studio Flow toolbox wrapping the openalea library.
 
 ## Links 
 
-* <a href='https://w3nest.org/apps/@vs-flow/doc/latest?nav=/api/toolboxes/tb-openalea' target='_blank'>Documentation</a>
+* <a href='https://w3nest.org/apps/@vs-flow/doc/latest?nav=/api/toolboxes/tb-three-js' target='_blank'>Documentation</a>
 * <a href='https://github.com/visual-studio-flow' target='_blank'>Visual Studio Flow</a>
 
 ## Installation, Build, Test
