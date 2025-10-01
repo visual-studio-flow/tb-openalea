@@ -1,6 +1,6 @@
 import { Immutables, Modules } from '@vs-flow/core'
-import { from, map, switchMap } from 'rxjs'
-import { get_interpreter } from './utils'
+import { map, switchMap } from 'rxjs'
+import { createObject } from './utils'
 import {
     BufferAttribute,
     BufferGeometry,
@@ -93,16 +93,15 @@ export const outputs = (
 ) => ({
     output$: arg.inputs.input$.pipe(
         switchMap(({ data, context }) => {
-            return from(
-                get_interpreter().createObject({
-                    code,
-                    inputs: {
-                        wp: data,
-                    },
-                    capturedOut: ['result'],
-                    capturedIn: {},
-                }),
-            ).pipe(
+            return createObject({
+                client: arg.dependencies.openalea,
+                code,
+                inputs: {
+                    wp: data,
+                },
+                capturedOut: ['result'],
+                capturedIn: {},
+            }).pipe(
                 map((resp) => {
                     const group = new Group()
                     resp.capturedOut.result

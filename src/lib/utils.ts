@@ -1,8 +1,10 @@
-export class OpenaleaIntepreter {
-    interpreter: any
+import { from } from 'rxjs'
 
-    constructor({}) {
-        this.interpreter = window['openalea']
+export class OpenaleaInterpreter {
+    client: any
+
+    constructor(client) {
+        this.client = client
     }
 
     run({ capturedIn, capturedOut, cellId, code }): Promise<any> {
@@ -13,7 +15,7 @@ export class OpenaleaIntepreter {
             cellId,
             previousCellIds: [],
         }
-        return this.interpreter.fetchJson('/run', {
+        return this.client.fetchJson('/run', {
             method: 'post',
             body: JSON.stringify(body),
             headers: { 'content-type': 'application/json' },
@@ -27,7 +29,7 @@ export class OpenaleaIntepreter {
             capturedIn,
             capturedOut,
         }
-        return this.interpreter.fetchJson('/create-object', {
+        return this.client.fetchJson('/create-object', {
             method: 'post',
             body: JSON.stringify(body),
             headers: { 'content-type': 'application/json' },
@@ -35,6 +37,19 @@ export class OpenaleaIntepreter {
     }
 }
 
-export function get_interpreter(): OpenaleaIntepreter {
-    return new OpenaleaIntepreter({})
+export function createObject({
+    code,
+    inputs,
+    capturedOut,
+    capturedIn,
+    client,
+}) {
+    return from(
+        new OpenaleaInterpreter(client).createObject({
+            code,
+            inputs,
+            capturedIn,
+            capturedOut,
+        }),
+    )
 }

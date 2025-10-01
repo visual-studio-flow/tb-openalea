@@ -1,6 +1,6 @@
 import { Modules, Configurations } from '@vs-flow/core'
-import { from, map, switchMap } from 'rxjs'
-import { get_interpreter } from './utils'
+import { map, switchMap } from 'rxjs'
+import { createObject } from './utils'
 
 /**
  * ### ⚙️ Defines the module's configuration.
@@ -81,16 +81,15 @@ export const outputs = (
 ) => ({
     output$: arg.inputs.input$.pipe(
         switchMap(({ configuration, context }) => {
-            return from(
-                get_interpreter().createObject({
-                    code,
-                    inputs: {},
-                    capturedIn: {
-                        axes: configuration.axes,
-                    },
-                    capturedOut: [],
-                }),
-            ).pipe(map((data) => ({ data, context })))
+            return createObject({
+                client: arg.dependencies.openalea,
+                code,
+                inputs: {},
+                capturedIn: {
+                    axes: configuration.axes,
+                },
+                capturedOut: [],
+            }).pipe(map((data) => ({ data, context })))
         }),
     ),
 })

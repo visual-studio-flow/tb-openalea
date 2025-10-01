@@ -25,10 +25,10 @@ function tbModule<TFactory extends TbModuleApi>(typeId: string) {
             documentation: `${baseDocUrl}/${typeId}`,
             dependencies: {
                 esm: [`${setup.name}/${typeId}#${setup.version} as factory`],
+                backends: ['openalea_interpreter#^0.1.0 as openalea'],
             },
         },
         implementation: async ({ fwdParams }) => {
-            console.log(`Get implementation of ${typeId} from toolbox`)
             const factory = fwdParams.dependencies.factory as TFactory
             return factory.module(fwdParams)
         },
