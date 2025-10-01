@@ -1,106 +1,86 @@
-ARG ROOT_CONTAINER=ubuntu:20.04
-FROM $ROOT_CONTAINER
+# ========================
+# Base image: Micromamba Debian 13 slim
+# ========================
+FROM mambaorg/micromamba:2.3.2-debian13-slim
 
 LABEL maintainer="OpenAlea"
 
-# Fix DL4006
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-USER root
-
-# Package Manager and Python implementation to use (https://github.com/conda-forge/miniforge)
-# - conda only: either Miniforge3 to use Python or Miniforge-pypy3 to use PyPy
-# - conda + mamba: either Mambaforge to use Python or Mambaforge-pypy3 to use PyPy
-ARG miniforge_python=Mambaforge
-
-# Configure environment
-ENV CONDA_VERSION=22.11.1-4 \
-    CONDA_DIR=/opt/conda \
-    CONDA_ENV=openalea \
+# ------------------------
+# Environment variables
+# ------------------------
+ENV CONDA_ENV=openalea \
     NB_USER=openalea \
     NB_UID=1000 \
     SHELL=/bin/bash \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
-    LANGUAGE=C.UTF-8 \ 
+    LANGUAGE=C.UTF-8 \
     DEBIAN_FRONTEND=noninteractive \
     NB_PYTHON_PREFIX=/opt/conda/envs/openalea \
-    PATH=/opt/conda/envs/openalea/bin:/opt/conda/bin:${PATH} \
+    PATH=/opt/conda/envs/openalea/bin:/opt/conda/bin:$PATH \
     HOME=/home/openalea
 
-# Create NB_USER with name openalea user with UID=1000 and in the 'users' group
-# and make sure these dirs are writable by the `users` group.
-RUN echo "Creating ${NB_USER} user..." && \
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# ========================
+# Install essential system packages and create user
+# ========================
+USER root
+RUN set -eux; \
+    apt-get update --allow-releaseinfo-change && \
+    apt-get install -y --no-install-recommends \
+    wget \
+    ca-certificates \
+    sudo \
+    locales && \
+    # configure UTF-8 locale
+    echo "C.UTF-8 UTF-8" > /etc/locale.gen && locale-gen && \
+    # create non-root user
     groupadd --gid ${NB_UID} ${NB_USER} && \
     useradd --create-home --gid ${NB_UID} --no-log-init --uid ${NB_UID} ${NB_USER} && \
-    echo ". ${CONDA_DIR}/etc/profile.d/conda.sh ; conda activate ${CONDA_ENV}" > /etc/profile.d/init_conda.sh && \
-    mkdir -p ${CONDA_DIR} && \
-    chown -R ${NB_USER}:${NB_USER} ${CONDA_DIR}/.. && \
-    chmod g+w /etc/passwd
+    # cleanup
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# SEE: https://github.com/phusion/baseimage-docker/issues/58
-ARG DEBIAN_FRONTEND=noninteractive
+# ========================
+# Setup micromamba environment
+# ========================
+RUN micromamba create -y -n ${CONDA_ENV} \
+    -c openalea3/label/dev \
+    -c openalea3/label/rc \
+    -c openalea3 \
+    -c conda-forge \
+    openalea.plantgl \
+    openalea.mtg \
+    oawidgets \
+    openalea.weberpenn && \
+    micromamba clean -afy && \
+    find /opt/conda -type f \( -name '*.a' -o -name '*.pyc' -o -name '*.js.map' \) -delete
 
-# Install all OS dependencies
-# install  OpenGL driver required for openalea installation
-RUN echo "Installing Apt-get packages..." && \
-    apt-get update --fix-missing && \
-    apt-get install --yes --no-install-recommends \
-    wget ca-certificates sudo locales libgl1-mesa-glx run-one && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo "C.UTF-8 UTF-8" > /etc/locale.gen && \
-    locale-gen
+# ========================
+# Setup shell hook for micromamba environment
+# ========================
+RUN mkdir -p /etc/profile.d/ && \
+    echo 'eval "$(micromamba shell hook --shell=bash --root-prefix=/opt/conda)"' > /etc/profile.d/micromamba.sh && \
+    echo "micromamba activate ${CONDA_ENV}" >> /etc/profile.d/micromamba.sh
 
-RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
-    sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
-    sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers
+# ========================
+# Install Python wheels
+# ========================
+COPY deps/*.whl /opt/app/deps/
+RUN micromamba run -n ${CONDA_ENV} pip install --no-cache-dir /opt/app/deps/*.whl
 
+COPY dist/openalea_interpreter-*.whl /opt/app
+RUN micromamba run -n ${CONDA_ENV} pip install --no-cache-dir /opt/app/openalea_interpreter-*.whl && \
+    rm -rf /opt/app/*.whl /opt/app/deps/*.whl
 
-# Prerequisites installation: conda, mamba
-RUN echo "Installing Miniforge..." && \
-    set -x && \
-    # Miniforge installer
-    miniforge_arch=$(uname -m) && \
-    export miniforge_arch && \
-    if [ "$miniforge_arch" == "aarm64" ]; then \
-    miniforge_arch="arm64"; \
-    fi; \
-    URL="https://github.com/conda-forge/miniforge/releases/download/${CONDA_VERSION}/${miniforge_python}-${CONDA_VERSION}-$(uname)-${miniforge_arch}.sh" && \
-    wget --quiet ${URL} -O miniforge.sh && \
-    /bin/bash miniforge.sh -f -b -p ${CONDA_DIR} && \
-    rm miniforge.sh && \
-    # Conda configuration see https://conda.io/projects/conda/en/latest/configuration.html
-    echo "conda ${CONDA_VERSION}" >> "${CONDA_DIR}/conda-meta/pinned" && \
-    conda config --system --set auto_update_conda false && \
-    conda config --system --set show_channel_urls true && \
-    conda update --all --quiet --yes && \
-    mamba clean -afy && \
-    rm -rf "/home/${NB_USER}/.cache/yarn"
-
-# Create "notebook" conda environment
-RUN  mamba env create --name ${CONDA_ENV} -y -c openalea3/label/dev -c openalea3/label/rc -c openalea3 -c conda-forge \
-    openalea.plantgl openalea.mtg oawidgets openalea.weberpenn \
-    && mamba clean -yaf \
-    && find ${CONDA_DIR} -follow -type f -name '*.a' -delete \
-    && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
-    && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete 
-
+# ========================
+# Switch to non-root user
+# ========================
+USER ${NB_USER}
 WORKDIR ${HOME}
 
-ENV BASH_ENV=/etc/profile.d/init_conda.sh
-
-# Install openalea_intepreter
-
-COPY deps/*.whl /opt/app/deps/
-COPY dist/openalea_interpreter-*.whl /opt/app
-
-RUN ${NB_PYTHON_PREFIX}/bin/pip install --no-cache-dir /opt/app/openalea_interpreter-*.whl --find-links /opt/app/deps && \
-    rm /opt/app/openalea_interpreter-*.whl && rm /opt/app/deps/*.whl
-
-
-USER ${NB_USER}
-
+# ========================
+# Expose port and entrypoint
+# ========================
 EXPOSE 8080
-
 ENTRYPOINT ["run_openalea_interpreter"]
