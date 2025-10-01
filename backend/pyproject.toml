@@ -13,8 +13,7 @@ classifiers = [
 dependencies = [
     "fastapi>=0.115,<0.116.0",
     "uvicorn>=0.24,<0.25",
-    "w3nest_client",
-    "numpy==2.1.1",
+    "w3nest_client"
 ]
 
 [project.optional-dependencies]

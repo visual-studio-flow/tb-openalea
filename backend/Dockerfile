@@ -22,13 +22,11 @@ ENV CONDA_VERSION=22.11.1-4 \
     SHELL=/bin/bash \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
-    LANGUAGE=C.UTF-8
-
-ENV NB_PYTHON_PREFIX=${CONDA_DIR}/envs/${CONDA_ENV} \
-    PATH=${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${PATH} \
-    HOME=/home/${NB_USER}
-
-ENV DEBIAN_FRONTEND noninteractive
+    LANGUAGE=C.UTF-8 \ 
+    DEBIAN_FRONTEND=noninteractive \
+    NB_PYTHON_PREFIX=/opt/conda/envs/openalea \
+    PATH=/opt/conda/envs/openalea/bin:/opt/conda/bin:${PATH} \
+    HOME=/home/openalea
 
 # Create NB_USER with name openalea user with UID=1000 and in the 'users' group
 # and make sure these dirs are writable by the `users` group.
@@ -66,7 +64,7 @@ RUN echo "Installing Miniforge..." && \
     miniforge_arch=$(uname -m) && \
     export miniforge_arch && \
     if [ "$miniforge_arch" == "aarm64" ]; then \
-      miniforge_arch="arm64"; \
+    miniforge_arch="arm64"; \
     fi; \
     URL="https://github.com/conda-forge/miniforge/releases/download/${CONDA_VERSION}/${miniforge_python}-${CONDA_VERSION}-$(uname)-${miniforge_arch}.sh" && \
     wget --quiet ${URL} -O miniforge.sh && \
@@ -80,25 +78,29 @@ RUN echo "Installing Miniforge..." && \
     mamba clean -afy && \
     rm -rf "/home/${NB_USER}/.cache/yarn"
 
-RUN mkdir -p /etc/jupyter/ && \
-    echo "c.CondaKernelSpecManager.env_filter = f'.*envs/{os.environ["CONDA_ENV"]}.*'" >> /etc/jupyter/jupyter_notebook_config.py
-
 # Create "notebook" conda environment
 RUN  mamba env create --name ${CONDA_ENV} -y -c openalea3/label/dev -c openalea3/label/rc -c openalea3 -c conda-forge \
-	openalea.plantgl openalea.mtg ipykernel jupyterlab oawidgets k3d openalea.weberpenn \
-        && mamba clean -yaf \
-        && find ${CONDA_DIR} -follow -type f -name '*.a' -delete \
-        && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
-        && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete 
-
-COPY --chown=openalea:openalea ./weberpenn.ipynb /home/openalea
+    openalea.plantgl openalea.mtg oawidgets k3d openalea.weberpenn \
+    && mamba clean -yaf \
+    && find ${CONDA_DIR} -follow -type f -name '*.a' -delete \
+    && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
+    && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete 
 
 WORKDIR ${HOME}
-USER ${NB_USER}
 
 ENV BASH_ENV=/etc/profile.d/init_conda.sh
 
-EXPOSE 8888
-##ENTRYPOINT ["/opt/start"]
-CMD ["bash", "-c", "source /opt/conda/etc/profile.d/conda.sh && conda activate openalea && jupyter lab --ip=0.0.0.0 --port=8888"]
+# Install openalea_intepreter
 
+COPY deps/*.whl /opt/app/deps/
+COPY dist/openalea_interpreter-*.whl /opt/app
+
+RUN ${NB_PYTHON_PREFIX}/bin/pip install --no-cache-dir /opt/app/openalea_interpreter-*.whl --find-links /opt/app/deps && \
+    rm /opt/app/openalea_interpreter-*.whl && rm /opt/app/deps/*.whl
+
+
+USER ${NB_USER}
+
+EXPOSE 8080
+
+ENTRYPOINT ["run_openalea_interpreter"]
