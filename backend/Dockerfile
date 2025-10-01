@@ -80,7 +80,7 @@ RUN echo "Installing Miniforge..." && \
 
 # Create "notebook" conda environment
 RUN  mamba env create --name ${CONDA_ENV} -y -c openalea3/label/dev -c openalea3/label/rc -c openalea3 -c conda-forge \
-    openalea.plantgl openalea.mtg oawidgets k3d openalea.weberpenn \
+    openalea.plantgl openalea.mtg oawidgets openalea.weberpenn \
     && mamba clean -yaf \
     && find ${CONDA_DIR} -follow -type f -name '*.a' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
