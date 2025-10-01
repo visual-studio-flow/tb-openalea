@@ -7,10 +7,6 @@ import time
 from contextlib import redirect_stderr, redirect_stdout
 from typing import Any
 import uuid
-from openalea.mtg import MTG, fat_mtg
-from openalea.weberpenn.mtg_client import Weber_MTG
-from openalea.weberpenn.tree_client import Quaking_Aspen
-from oawidgets.plantgl import PlantGL
 from fastapi import APIRouter, Depends
 from starlette.requests import Request
 from starlette.responses import Response
