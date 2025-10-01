@@ -44,15 +44,13 @@ RUN set -eux; \
 # ========================
 # Setup micromamba environment
 # ========================
-RUN micromamba create -y -n ${CONDA_ENV} \
+RUN micromamba create -y -n ${CONDA_ENV} pip \
     -c openalea3/label/dev \
     -c openalea3/label/rc \
     -c openalea3 \
     -c conda-forge \
     openalea.plantgl \
-    openalea.mtg \
-    oawidgets \
-    openalea.weberpenn && \
+    openalea.mtg && \
     micromamba clean -afy && \
     find /opt/conda -type f \( -name '*.a' -o -name '*.pyc' -o -name '*.js.map' \) -delete
 
@@ -72,6 +70,25 @@ RUN micromamba run -n ${CONDA_ENV} pip install --no-cache-dir /opt/app/deps/*.wh
 COPY dist/openalea_interpreter-*.whl /opt/app
 RUN micromamba run -n ${CONDA_ENV} pip install --no-cache-dir /opt/app/openalea_interpreter-*.whl && \
     rm -rf /opt/app/*.whl /opt/app/deps/*.whl
+
+
+# =================================
+# Install Custom Micromamba modules
+# =================================
+
+# for instance: oawidgets openalea.weberpenn
+ARG mambaModules=""
+
+RUN if [ -n "${mambaModules}" ]; then \
+    echo "Installing custom Micromamba modules: ${mambaModules}" && \
+    micromamba install -n ${CONDA_ENV} -y \ 
+    -c openalea3/label/dev \
+    -c openalea3/label/rc \
+    -c openalea3 \
+    -c conda-forge \
+    ${mambaModules} && \
+    micromamba clean -afy; \
+    fi
 
 # ========================
 # Switch to non-root user

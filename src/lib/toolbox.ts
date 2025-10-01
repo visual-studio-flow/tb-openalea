@@ -25,7 +25,16 @@ function tbModule<TFactory extends TbModuleApi>(typeId: string) {
             documentation: `${baseDocUrl}/${typeId}`,
             dependencies: {
                 esm: [`${setup.name}/${typeId}#${setup.version} as factory`],
-                backends: ['openalea_interpreter#^0.1.0 as openalea'],
+                backends: {
+                    modules: ['openalea_interpreter#^0.1.0 as openalea'],
+                    configurations: {
+                        openalea_interpreter: {
+                            build: {
+                                mambaModules: 'oawidgets openalea.weberpenn',
+                            },
+                        },
+                    },
+                },
             },
         },
         implementation: async ({ fwdParams }) => {

@@ -22,7 +22,7 @@ externals_deps = {
     "three": "^0.152.0",
     "rxjs": "^7.8.1",
     "mkdocs-ts": "^0.5.2",
-    "@w3nest/webpm-client": "^0.1.5",
+    "@w3nest/webpm-client": "^0.1.15",
     "@mkdocs-ts/code-api": "^0.2.3",
     "@mkdocs-ts/notebook": "^0.1.5",
 }
