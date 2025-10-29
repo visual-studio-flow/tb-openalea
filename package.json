@@ -1,7 +1,7 @@
 {
     "name": "@vs-flow/tb-openalea",
     "description": "Visual Studio Flow toolbox wrapping the openalea library.",
-    "version": "0.1.0-wip",
+    "version": "0.1.0",
     "author": "reinisch.gui@gmail.com",
     "license": "MIT",
     "homepage": "https://github.com/vs-flow/tb-openalea#README.md",
